@@ -15,6 +15,9 @@ export const config = {
   database: {
     url: process.env.DATABASE_URL!,
   },
+  telegram: {
+    botToken: process.env.TELEGRAM_BOT_TOKEN!,
+  },
   worker: {
     concurrency: parseInt(process.env.WORKER_CONCURRENCY || '10'),
     queueName: 'contract-generation',
@@ -28,6 +31,7 @@ const requiredEnvVars = [
   'GCS_CLIENT_EMAIL',
   'GCS_PRIVATE_KEY',
   'DATABASE_URL',
+  'TELEGRAM_BOT_TOKEN',
 ];
 
 for (const envVar of requiredEnvVars) {

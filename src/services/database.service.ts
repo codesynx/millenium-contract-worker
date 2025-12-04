@@ -23,6 +23,13 @@ async function getPool(): Promise<Pool> {
   return pool;
 }
 
+interface ContractParties {
+  contractNumber: string;
+  clientTelegramId: string | null;
+  sellerTelegramId: string | null;
+  toolName: string;
+}
+
 export class DatabaseService {
   async updateContractFile(contractId: string, fileName: string): Promise<void> {
     const pool = await getPool();
@@ -45,5 +52,37 @@ export class DatabaseService {
     );
 
     console.error(`✗ Contract ${contractId} generation failed: ${error}`);
+  }
+
+  async getContractParties(contractId: string): Promise<ContractParties | null> {
+    const pool = await getPool();
+
+    const result = await pool.query(
+      `SELECT
+        c.id,
+        c."toolName",
+        c."rentApplicationId",
+        client."telegramId" as "clientTelegramId",
+        seller."telegramId" as "sellerTelegramId"
+      FROM "Contract" c
+      JOIN "RentApplication" ra ON ra.id = c."rentApplicationId"
+      JOIN "User" client ON client.id = ra."clientId"
+      JOIN "User" seller ON seller.id = ra."sellerId"
+      WHERE c.id = $1`,
+      [contractId]
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+
+    return {
+      contractNumber: contractId.substring(0, 8).toUpperCase(),
+      clientTelegramId: row.clientTelegramId,
+      sellerTelegramId: row.sellerTelegramId,
+      toolName: row.toolName,
+    };
   }
 }

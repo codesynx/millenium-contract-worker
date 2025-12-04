@@ -5,6 +5,7 @@ import { ContractJobData, ContractJobResult } from './types.js';
 import { TypstService } from './services/typst.service.js';
 import { GCSService } from './services/gcs.service.js';
 import { DatabaseService } from './services/database.service.js';
+import { TelegramService } from './services/telegram.service.js';
 
 export class ContractWorker {
   private worker: Worker;
@@ -12,12 +13,14 @@ export class ContractWorker {
   private typstService: TypstService;
   private gcsService: GCSService;
   private databaseService: DatabaseService;
+  private telegramService: TelegramService;
   private connection: Redis;
 
   constructor() {
     this.typstService = new TypstService();
     this.gcsService = new GCSService();
     this.databaseService = new DatabaseService();
+    this.telegramService = new TelegramService();
 
     // Create Redis connection for BullMQ
     this.connection = new Redis(config.redis.url, {
@@ -87,9 +90,40 @@ export class ContractWorker {
       // Step 3: Update database
       console.log(`  → Updating database...`);
       await this.databaseService.updateContractFile(data.contractId, fileName);
+      await job.updateProgress(85);
+
+      // Step 4: Fetch contract parties for notification
+      console.log(`  → Fetching contract parties...`);
+      const parties = await this.databaseService.getContractParties(data.contractId);
+
+      // Step 5: Send contract via Telegram to both parties
+      if (parties) {
+        if (parties.clientTelegramId && parties.sellerTelegramId) {
+          console.log(`  → Sending contract via Telegram to both parties...`);
+          try {
+            await this.telegramService.sendContractToBothParties(
+              parties.clientTelegramId,
+              parties.sellerTelegramId,
+              pdfBuffer,
+              parties.contractNumber,
+              parties.toolName
+            );
+          } catch (telegramError) {
+            console.error('⚠️  Failed to send contract via Telegram:', telegramError);
+            console.error('   Contract PDF is still available in GCS at:', fileName);
+          }
+        } else {
+          console.warn(`⚠️  Missing Telegram IDs for contract ${data.contractId}`);
+          console.warn(`   Client: ${parties.clientTelegramId || 'MISSING'}`);
+          console.warn(`   Seller: ${parties.sellerTelegramId || 'MISSING'}`);
+        }
+      } else {
+        console.error(`✗ Could not fetch contract parties for ${data.contractId}`);
+      }
+
       await job.updateProgress(100);
 
-      // Step 4: Generate signed URL for immediate use
+      // Step 6: Generate signed URL for immediate use
       const fileUrl = await this.gcsService.generateSignedUrl(fileName);
 
       console.log(`✓ Contract ${data.contractId} generated successfully`);
