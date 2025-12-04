@@ -14,6 +14,49 @@ export class TypstService {
     this.templatePath = join(process.cwd(), 'templates', 'rental-contract.typ');
   }
 
+  private getCityNameInCyrillic(cityName: string): string {
+    // City name mapping from Latin to Cyrillic
+    const cityMap: Record<string, string> = {
+      'astana': 'Астана',
+      'almaty': 'Алматы',
+      'shymkent': 'Шымкент',
+      'aktobe': 'Ақтөбе',
+      'karaganda': 'Қарағанды',
+      'taraz': 'Тараз',
+      'pavlodar': 'Павлодар',
+      'ust-kamenogorsk': 'Өскемен',
+      'semey': 'Семей',
+      'aktau': 'Ақтау',
+      'kostanay': 'Қостанай',
+      'kyzylorda': 'Қызылорда',
+      'uralsk': 'Орал',
+      'atyrau': 'Атырау',
+      'petropavlovsk': 'Петропавл',
+      'temirtau': 'Теміртау',
+      'turkistan': 'Түркістан',
+      'kokshetau': 'Көкшетау',
+      'ekibastuz': 'Екібастұз',
+      'rudny': 'Рудный',
+      'taldykorgan': 'Талдықорған',
+      'zhezkazgan': 'Жезқазған',
+      'balkhash': 'Балқаш',
+      'kentau': 'Кентау',
+      'zhanaozen': 'Жаңаөзен',
+      'saryagash': 'Сарыағаш',
+      'arys': 'Арыс',
+      'shakhtinsk': 'Шахтинск',
+      'ridder': 'Риддер',
+      'satpaev': 'Сатпаев',
+      'akkol': 'Акколь',
+    };
+
+    // Normalize the input (lowercase, trim)
+    const normalized = cityName.toLowerCase().trim();
+
+    // Return mapped name or capitalize first letter if not found
+    return cityMap[normalized] || cityName.charAt(0).toUpperCase() + cityName.slice(1);
+  }
+
   private async fillTemplate(data: ContractJobData): Promise<string> {
     // Read the template
     const template = await readFile(this.templatePath, 'utf-8');
@@ -31,7 +74,7 @@ export class TypstService {
     // Replace all placeholders
     const filled = template
       .replace(/\{\{contractNumber\}\}/g, data.contractNumber)
-      .replace(/\{\{city\}\}/g, data.city)
+      .replace(/\{\{city\}\}/g, this.getCityNameInCyrillic(data.city))
       .replace(/\{\{date\}\}/g, formatDate(data.startDate))
       .replace(/\{\{sellerName\}\}/g, data.sellerName)
       .replace(/\{\{sellerPhone\}\}/g, data.sellerPhone)
