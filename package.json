@@ -1,0 +1,26 @@
+{
+  "name": "millenium-worker",
+  "version": "1.0.0",
+  "description": "Typst-based contract generation worker for Millenium",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@google-cloud/storage": "^7.14.0",
+    "@types/pg": "^8.15.6",
+    "bullmq": "^5.15.0",
+    "dotenv": "^16.4.7",
+    "ioredis": "^5.4.1",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
