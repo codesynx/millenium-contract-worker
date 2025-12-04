@@ -1,4 +1,4 @@
-import { Worker, Job } from 'bullmq';
+import { Worker, Job, Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 import { config } from './config.js';
 import { ContractJobData, ContractJobResult } from './types.js';
@@ -8,6 +8,7 @@ import { DatabaseService } from './services/database.service.js';
 
 export class ContractWorker {
   private worker: Worker;
+  private queue: Queue;
   private typstService: TypstService;
   private gcsService: GCSService;
   private databaseService: DatabaseService;
@@ -21,6 +22,11 @@ export class ContractWorker {
     // Create Redis connection for BullMQ
     this.connection = new Redis(config.redis.url, {
       maxRetriesPerRequest: null,
+    });
+
+    // Create the queue for stats
+    this.queue = new Queue(config.worker.queueName, {
+      connection: this.connection,
     });
 
     // Create the worker
@@ -110,9 +116,48 @@ export class ContractWorker {
     }
   }
 
+  isHealthy(): boolean {
+    // Check if worker is running and Redis connection is active
+    return this.worker.isRunning() && this.connection.status === 'ready';
+  }
+
+  async getStats() {
+    try {
+      // Get queue metrics
+      const [waiting, active, completed, failed] = await Promise.all([
+        this.queue.getWaitingCount(),
+        this.queue.getActiveCount(),
+        this.queue.getCompletedCount(),
+        this.queue.getFailedCount(),
+      ]);
+
+      const isPaused = this.worker.isPaused();
+
+      return {
+        waiting,
+        active,
+        completed,
+        failed,
+        isRunning: this.worker.isRunning(),
+        isPaused,
+      };
+    } catch (error) {
+      console.error('Failed to get worker stats:', error);
+      return {
+        waiting: 0,
+        active: 0,
+        completed: 0,
+        failed: 0,
+        isRunning: this.worker.isRunning(),
+        isPaused: false,
+      };
+    }
+  }
+
   async close() {
     console.log('Closing worker...');
     await this.worker.close();
+    await this.queue.close();
     await this.connection.quit();
   }
 }
