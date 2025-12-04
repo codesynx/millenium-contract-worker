@@ -37,8 +37,5 @@ RUN npm run build
 # Create temp directory for Typst compilation
 RUN mkdir -p /app/temp
 
-# Expose health check port (optional)
-EXPOSE 3001
-
-# Run the worker
+# Run the worker (no HTTP endpoint needed)
 CMD ["node", "dist/index.js"]
